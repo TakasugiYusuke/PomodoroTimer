@@ -393,6 +393,7 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 2px s
 .notification-icon { color: var(--primary); font-size: 17px; }
 .notification-button.is-enabled .notification-dot { background: var(--color-success); }
 .notification-button.is-denied .notification-dot { background: var(--color-danger); }
+.notification-button.is-unavailable .notification-dot { background: var(--on-surface-muted); }
 .settings-footer { justify-content: space-between; gap: var(--space-sm); padding-top: var(--space-lg); }
 .status-message { color: var(--on-surface-muted); font-size: var(--font-caption-size); line-height: 1.35; }
 .text-button { min-height: 48px; padding: 0 var(--space-sm); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--primary); font-size: var(--font-caption-size); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }

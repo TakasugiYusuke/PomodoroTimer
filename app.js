@@ -538,44 +538,85 @@
     });
   }
 
+  function browserNotificationStatus() {
+    if (!('Notification' in window)) return 'unsupported';
+    if (window.isSecureContext === false) return 'insecure';
+    return window.Notification.permission;
+  }
+
   function sendBrowserNotification(title, body) {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (browserNotificationStatus() !== 'granted') return false;
     try {
-      const notification = new Notification(title, { body, tag: 'focus-flow-timer' });
+      const notification = new window.Notification(title, {
+        body,
+        tag: 'focus-flow-timer',
+        renotify: true,
+      });
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
       window.setTimeout(() => notification.close(), 7000);
+      return true;
     } catch {
       // ローカルファイル環境などではブラウザ通知が利用できない場合があります。
+      return false;
     }
   }
 
   async function requestNotificationPermission() {
-    if (!('Notification' in window)) {
+    const status = browserNotificationStatus();
+    if (status === 'unsupported') {
+      updateNotificationButton();
       showFeedback('このブラウザは通知に対応していません。音で通知します。');
-      return;
+      return false;
     }
-    if (Notification.permission === 'default') {
+    if (status === 'insecure') {
+      updateNotificationButton();
+      showFeedback('ブラウザ通知にはHTTPS環境が必要です。音で通知します。');
+      return false;
+    }
+    if (status === 'denied') {
+      updateNotificationButton();
+      showFeedback('ブラウザ通知がブロックされています。ブラウザのサイト設定から許可してください。');
+      return false;
+    }
+    if (status === 'default') {
       try {
-        await Notification.requestPermission();
+        await window.Notification.requestPermission();
       } catch {
         // Permission requests can be rejected by browser policy.
+        showFeedback('通知の許可を取得できませんでした。音で通知します。');
       }
     }
     updateNotificationButton();
+    if (browserNotificationStatus() === 'granted') {
+      showFeedback('ブラウザ通知を有効にしました。');
+      return true;
+    }
+    return false;
   }
 
   function updateNotificationButton() {
-    const supported = 'Notification' in window;
-    const permission = supported ? Notification.permission : 'unsupported';
+    const permission = browserNotificationStatus();
+    const enabled = permission === 'granted';
+    const unavailable = permission === 'unsupported' || permission === 'insecure';
     elements.notificationButton.classList.toggle('is-enabled', permission === 'granted');
     elements.notificationButton.classList.toggle('is-denied', permission === 'denied');
-    elements.notificationDot.className = `notification-dot${permission === 'granted' ? ' is-enabled' : ''}`;
-    elements.notificationText.textContent = permission === 'granted'
+    elements.notificationButton.classList.toggle('is-unavailable', unavailable);
+    elements.notificationButton.setAttribute('aria-pressed', String(enabled));
+    elements.notificationDot.className = `notification-dot${enabled ? ' is-enabled' : ''}`;
+    elements.notificationText.textContent = enabled
       ? 'ブラウザ通知が有効です'
       : permission === 'denied'
         ? 'ブラウザ通知がブロックされています'
-        : supported
-          ? 'ブラウザ通知を有効にする'
-          : 'ブラウザ通知には対応していません';
+        : permission === 'insecure'
+          ? 'HTTPSでブラウザ通知を利用できます'
+          : permission === 'unsupported'
+            ? 'ブラウザ通知には対応していません'
+            : 'ブラウザ通知を有効にする';
+    elements.notificationButton.setAttribute('aria-label', elements.notificationText.textContent);
+    elements.notificationButton.setAttribute('title', elements.notificationText.textContent);
   }
 
   function initializeMdcComponents() {
