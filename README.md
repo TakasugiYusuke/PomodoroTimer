@@ -4,7 +4,18 @@
 
 ## 起動
 
-`index.html` をブラウザで開くだけで動作します。GitHub Pages、Cloudflare Pages、Netlify、Vercel などの静的ホスティングにもそのまま配置できます。
+Windowsでは `start.cmd` をダブルクリックしてください。Node.jsのローカルサーバーが起動し、`http://localhost:4173` がブラウザで開きます。終了するときはサーバーのウィンドウで `Ctrl+C` を押してください。
+
+`index.html` の直接起動でもタイマーは動作しますが、ブラウザのセキュリティ制限によりWindows通知は利用できません。GitHub Pages、Cloudflare Pages、Netlify、Vercelなど、HTTPSの静的ホスティングにもそのまま配置できます。
+
+### Windows通知
+
+1. `start.cmd` からアプリを起動します。
+2. 画面の「ブラウザ通知を有効にする」を押します。
+3. ブラウザの確認で「許可」を選びます。
+4. 直後にテスト通知がWindowsへ送信されます。
+
+テスト通知が出ない場合は、ブラウザのサイト設定で `http://localhost:4173` の通知が許可されていることと、Windowsの「設定 > システム > 通知」で使用中のブラウザが有効になっていることを確認してください。
 
 ## 主な機能
 

@@ -63,6 +63,7 @@
   let saveToastTimer;
   let feedbackTimer;
   let audioContext;
+  let notificationServiceWorkerPromise;
   let lastAnnouncedTimerState = 'idle:0:0';
 
   const timer = {
@@ -540,18 +541,47 @@
 
   function browserNotificationStatus() {
     if (!('Notification' in window)) return 'unsupported';
+    if (window.location.protocol === 'file:') return 'file';
     if (window.isSecureContext === false) return 'insecure';
     return window.Notification.permission;
   }
 
-  function sendBrowserNotification(title, body) {
+  function registerNotificationServiceWorker() {
+    if (notificationServiceWorkerPromise) return notificationServiceWorkerPromise;
+    if (!('serviceWorker' in navigator) || window.isSecureContext === false) {
+      notificationServiceWorkerPromise = Promise.resolve(null);
+      return notificationServiceWorkerPromise;
+    }
+
+    notificationServiceWorkerPromise = navigator.serviceWorker
+      .register('./sw.js')
+      .then(() => navigator.serviceWorker.ready)
+      .catch(() => null);
+    return notificationServiceWorkerPromise;
+  }
+
+  async function sendBrowserNotification(title, body) {
     if (browserNotificationStatus() !== 'granted') return false;
+
+    const options = {
+      body,
+      tag: 'focus-flow-timer',
+      renotify: true,
+      requireInteraction: true,
+    };
+
     try {
-      const notification = new window.Notification(title, {
-        body,
-        tag: 'focus-flow-timer',
-        renotify: true,
-      });
+      const registration = await registerNotificationServiceWorker();
+      if (registration) {
+        await registration.showNotification(title, options);
+        return true;
+      }
+    } catch {
+      // Service Worker 経由で失敗した場合は、通常の Notification API を試します。
+    }
+
+    try {
+      const notification = new window.Notification(title, options);
       notification.onclick = () => {
         window.focus();
         notification.close();
@@ -559,12 +589,11 @@
       window.setTimeout(() => notification.close(), 7000);
       return true;
     } catch {
-      // ローカルファイル環境などではブラウザ通知が利用できない場合があります。
       return false;
     }
   }
 
-  async function requestNotificationPermission() {
+  async function requestNotificationPermission(showTestNotification = false) {
     const status = browserNotificationStatus();
     if (status === 'unsupported') {
       updateNotificationButton();
@@ -574,6 +603,11 @@
     if (status === 'insecure') {
       updateNotificationButton();
       showFeedback('ブラウザ通知にはHTTPS環境が必要です。音で通知します。');
+      return false;
+    }
+    if (status === 'file') {
+      updateNotificationButton();
+      showFeedback('ファイルの直開きではWindows通知を利用できません。start.cmdから起動してください。');
       return false;
     }
     if (status === 'denied') {
@@ -591,8 +625,12 @@
     }
     updateNotificationButton();
     if (browserNotificationStatus() === 'granted') {
-      showFeedback('ブラウザ通知を有効にしました。');
-      return true;
+      const sent = !showTestNotification || await sendBrowserNotification(
+        'Focus Flow の通知は有効です',
+        '区間が終了したときにお知らせします。',
+      );
+      showFeedback(sent ? 'テスト通知をWindowsへ送信しました。' : '通知の表示に失敗しました。ブラウザやOSの通知設定を確認してください。');
+      return sent;
     }
     return false;
   }
@@ -600,7 +638,7 @@
   function updateNotificationButton() {
     const permission = browserNotificationStatus();
     const enabled = permission === 'granted';
-    const unavailable = permission === 'unsupported' || permission === 'insecure';
+    const unavailable = permission === 'unsupported' || permission === 'insecure' || permission === 'file';
     elements.notificationButton.classList.toggle('is-enabled', permission === 'granted');
     elements.notificationButton.classList.toggle('is-denied', permission === 'denied');
     elements.notificationButton.classList.toggle('is-unavailable', unavailable);
@@ -610,6 +648,8 @@
       ? 'ブラウザ通知が有効です'
       : permission === 'denied'
         ? 'ブラウザ通知がブロックされています'
+        : permission === 'file'
+          ? 'start.cmdから起動すると通知を利用できます'
         : permission === 'insecure'
           ? 'HTTPSでブラウザ通知を利用できます'
           : permission === 'unsupported'
@@ -655,7 +695,7 @@
   function notifyIntervalFinished(completedSet, completedStep, nextLabel) {
     playNotificationTone();
     const body = nextLabel ? `次の区間: ${nextLabel}` : 'すべてのセットが完了しました。';
-    sendBrowserNotification(`区間 ${completedStep} が終了`, body);
+    void sendBrowserNotification(`区間 ${completedStep} が終了`, body);
     if (document.hidden) showToast(nextLabel ? `区間終了 · 次は ${nextLabel}` : 'セッションが完了しました。');
   }
 
@@ -827,7 +867,7 @@
   });
   elements.loadPreset.addEventListener('click', loadPreset);
   elements.restoreDefaults.addEventListener('click', restoreDefaults);
-  elements.notificationButton.addEventListener('click', requestNotificationPermission);
+  elements.notificationButton.addEventListener('click', () => requestNotificationPermission(true));
   elements.themeToggle.addEventListener('click', toggleTheme);
   document.addEventListener('visibilitychange', tick);
   document.addEventListener('keydown', (event) => {
@@ -840,6 +880,7 @@
   window.addEventListener('beforeunload', () => persistSettings());
 
   applyTheme(currentTheme());
+  registerNotificationServiceWorker();
   renderAll();
   initializeMdcComponents();
 })();
