@@ -4,7 +4,7 @@
 
 ## 通常利用（GitHub Pages）
 
-公開先: [Focus Flow](https://takasugiyusuke.github.io/PomodoroTimer/)（Pages有効化後に利用可能）
+公開先: [Focus Flow](https://takasugiyusuke.github.io/PomodoroTimer/)
 
 公開URLをブラウザで開いて利用します。`start.cmd`は不要です。初回は公開URLで通知を許可してください。ローカル環境の設定や通知許可は公開URLへ引き継がれません。
 
