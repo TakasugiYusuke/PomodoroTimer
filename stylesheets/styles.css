@@ -335,7 +335,7 @@ kbd { display: inline-flex; min-width: 28px; min-height: 24px; align-items: cent
 .active-preset { max-width: 190px; overflow-wrap: anywhere; color: var(--on-primary-surface); font-size: var(--font-caption-size); font-weight: 600; line-height: 1.35; }
 .section-count, .quick-picker-heading small, .inline-feedback { color: var(--on-surface-muted); font-size: var(--font-caption-size); line-height: 1.35; }
 
-.interval-list { display: flex; flex-direction: column; margin: var(--space-lg) 0 0; padding: 0; overflow: hidden; border: 1px solid var(--border-strong); border-radius: var(--radius-lg); background: var(--surface); list-style: none; }
+.interval-list { container-type: inline-size; display: flex; flex-direction: column; margin: var(--space-lg) 0 0; padding: 0; overflow: hidden; border: 1px solid var(--border-strong); border-radius: var(--radius-lg); background: var(--surface); list-style: none; }
 .interval-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: var(--space-md); align-items: center; min-height: 64px; padding: var(--space-md); border: 0; border-left: 4px solid transparent; border-bottom: 1px solid var(--border); background: var(--surface); transition: background .2s ease, border-color .2s ease; }
 .interval-row:last-child { border-bottom: 0; }
 .interval-row:hover { background: var(--surface-subtle); }
@@ -352,6 +352,11 @@ kbd { display: inline-flex; min-width: 28px; min-height: 24px; align-items: cent
 .icon-button:hover:not(:disabled) { border-color: var(--border); background: var(--surface-subtle); color: var(--on-surface); }
 .icon-button.delete:hover:not(:disabled) { border-color: var(--color-danger); background: var(--danger-surface); color: var(--color-danger); }
 .icon-button.move-up, .icon-button.move-down { font-size: 18px; }
+
+@container (max-width: 500px) {
+  .interval-row { grid-template-columns: 32px minmax(0, 1fr); row-gap: var(--space-xs); }
+  .interval-tools { grid-column: 2; justify-content: flex-end; }
+}
 
 .add-interval { display: flex; align-items: center; justify-content: center; gap: var(--space-xs); width: 100%; min-height: 48px; margin-top: var(--space-sm); padding: 0 var(--space-md); border: 1px dashed var(--border-strong); border-radius: var(--radius-md); background: transparent; color: var(--primary); font-size: var(--font-caption-size); font-weight: 600; }
 .add-interval:hover { border-color: var(--primary); background: var(--primary-surface); }
