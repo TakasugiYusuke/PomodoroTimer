@@ -29,6 +29,7 @@
     presetFeedback: $('#presetFeedback'),
     loadPreset: $('#loadPreset'),
     savePreset: $('#savePreset'),
+    updatePreset: $('#updatePreset'),
     addInterval: $('#addInterval'),
     restoreDefaults: $('#restoreDefaults'),
     settingsFieldset: $('#settingsFieldset'),
@@ -280,12 +281,11 @@
     if (elements.activePreset) {
       elements.activePreset.textContent = appliedPreset ? `適用中: ${appliedPreset.name}` : '適用中: カスタム設定';
     }
-    if (presets.length && !elements.presetSelect.disabled) {
-      elements.presetSelect.value = appliedPreset?.id || '';
-    }
+    elements.updatePreset.disabled = !presets.some((preset) => preset.id === elements.presetSelect.value);
+    elements.loadPreset.disabled = elements.updatePreset.disabled;
   }
 
-  function renderPresets() {
+  function renderPresets(selectedId = elements.presetSelect.value) {
     elements.presetSelect.replaceChildren();
     if (!presets.length) {
       const option = document.createElement('option');
@@ -297,7 +297,7 @@
     } else {
       const customOption = document.createElement('option');
       customOption.value = '';
-      customOption.textContent = 'カスタム設定（プリセット未適用）';
+      customOption.textContent = 'プリセットを選択';
       elements.presetSelect.append(customOption);
       presets.forEach((preset) => {
         const option = document.createElement('option');
@@ -308,6 +308,7 @@
       elements.presetSelect.disabled = false;
       elements.loadPreset.disabled = false;
     }
+    elements.presetSelect.value = presets.some((preset) => preset.id === selectedId) ? selectedId : '';
     elements.presetCount.textContent = `${presets.length}件保存`;
     updateAppliedPreset();
   }
@@ -467,18 +468,42 @@
 
   function savePreset() {
     const name = elements.presetName.value.trim() || `フロー ${presets.length + 1}`;
+    if (presets.some((item) => item.name === name.slice(0, 32))) {
+      showFeedback('同じ名前のプリセットがあります。別の名前を入力してください。');
+      return;
+    }
+    if (presets.length >= 30) {
+      showFeedback('プリセットは30件まで保存できます。');
+      return;
+    }
     const preset = {
       id: makeId('preset'),
       name: name.slice(0, 32),
       intervals: settings.intervals.map(({ minutes, type }) => ({ minutes, type })),
       repeatCount: settings.repeatCount,
     };
-    presets = [preset, ...presets.filter((item) => item.name !== preset.name)].slice(0, 30);
+    presets = [preset, ...presets];
     persistPresets();
-    renderPresets();
-    elements.presetSelect.value = preset.id;
+    renderPresets(preset.id);
     elements.presetName.value = '';
     showFeedback(`「${preset.name}」を保存しました。`);
+  }
+
+  function updatePreset() {
+    const preset = presets.find((item) => item.id === elements.presetSelect.value);
+    if (!preset) return;
+    const name = elements.presetName.value.trim().slice(0, 32) || preset.name;
+    if (presets.some((item) => item.id !== preset.id && item.name === name)) {
+      showFeedback('同じ名前のプリセットがあります。別の名前を入力してください。');
+      return;
+    }
+    preset.name = name;
+    preset.intervals = settings.intervals.map(({ minutes, type }) => ({ minutes, type }));
+    preset.repeatCount = settings.repeatCount;
+    persistPresets();
+    renderPresets(preset.id);
+    elements.presetName.value = '';
+    showFeedback(`「${name}」を更新しました。`);
   }
 
   function loadPreset() {
@@ -874,6 +899,8 @@
     if (event.key === 'Enter') savePreset();
   });
   elements.loadPreset.addEventListener('click', loadPreset);
+  elements.updatePreset.addEventListener('click', updatePreset);
+  elements.presetSelect.addEventListener('change', updateAppliedPreset);
   elements.restoreDefaults.addEventListener('click', restoreDefaults);
   elements.notificationButton.addEventListener('click', () => requestNotificationPermission(true));
   elements.themeToggle.addEventListener('click', toggleTheme);

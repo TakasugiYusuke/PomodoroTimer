@@ -20,8 +20,8 @@
     <link rel="icon" href="img/favicon.svg" type="image/svg+xml" />
     <!-- アイコンは既存の操作意味を保つために使用します。 -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
-    <link rel="stylesheet" href="stylesheets/styles.css?v=layout-20261102" />
-    <script src="app.js?v=f5ac509" defer></script>
+    <link rel="stylesheet" href="stylesheets/styles.css?v=20261102-design2" />
+    <script src="app.js?v=20261102-design2" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -166,9 +166,11 @@
                 <label class="sr-only" for="presetName">プリセット名</label>
                 <input class="text-input preset-name-field" id="presetName" type="text" maxlength="32" autocomplete="off" aria-label="プリセット名" placeholder="プリセット名を入力" />
                 <button class="button mdc-button mdc-button--outlined button-small button-secondary" id="savePreset" type="button">
-                  <span class="mdc-button__ripple"></span><span class="mdc-button__label">保存</span>
+                  <span class="mdc-button__ripple"></span><span class="mdc-button__label">新規保存</span>
                 </button>
               </div>
+              <button class="button mdc-button button-secondary preset-update" id="updatePreset" type="button" disabled><span class="mdc-button__label">選択したプリセットを更新</span></button>
+              <p class="preset-help">更新すると、選択中のプリセットに現在の区間とセット数を保存します。名前を入力すると名前も変更できます。</p>
               <p class="inline-feedback" id="presetFeedback" aria-live="polite"></p>
             </div>
           </fieldset>
