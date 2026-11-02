@@ -343,6 +343,7 @@ kbd { display: inline-flex; min-width: 28px; min-height: 24px; align-items: cent
 .interval-index { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--surface-subtle); color: var(--on-surface-muted); font-size: var(--font-caption-size); }
 .interval-row.is-selected .interval-index { background: var(--primary); color: var(--on-primary); }
 .interval-input-wrap { display: flex; align-items: center; gap: var(--space-sm); min-height: 48px; }
+.interval-type { min-height: 40px; max-width: 75px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--on-surface); }
 .interval-input { width: 72px; min-height: 48px; padding: 0 var(--space-xs); border: 1px solid transparent; border-bottom-color: var(--border-strong); border-radius: var(--radius-sm); outline: 0; background: transparent; color: var(--on-surface); font-size: var(--font-body-size); font-variant-numeric: tabular-nums; font-weight: 500; }
 .interval-input:focus { border-color: var(--primary); outline: 2px solid var(--primary); outline-offset: 2px; }
 .unit-label { color: var(--on-surface-muted); font-size: var(--font-caption-size); }

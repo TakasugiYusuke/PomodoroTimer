@@ -8,7 +8,7 @@
   };
 
   const DEFAULT_SETTINGS = {
-    intervals: [{ minutes: 25 }, { minutes: 5 }],
+    intervals: [{ minutes: 25, type: 'work' }, { minutes: 5, type: 'break' }],
     repeatCount: 4,
     volume: 0.65,
   };
@@ -123,7 +123,8 @@
     const source = raw && typeof raw === 'object' ? raw : {};
     const sourceIntervals = Array.isArray(source.intervals) ? source.intervals : DEFAULT_SETTINGS.intervals;
     const intervals = sourceIntervals
-      .map((interval) => ({
+      .map((interval, index) => ({
+        type: interval?.type === 'break' || interval?.type === 'work' ? interval.type : (index % 2 ? 'break' : 'work'),
         id: typeof interval?.id === 'string' ? interval.id : makeId(),
         minutes: normalizeMinutes(interval?.minutes, 5),
       }))
@@ -153,7 +154,7 @@
         .map((preset) => ({
           id: typeof preset.id === 'string' ? preset.id : makeId('preset'),
           name: preset.name.trim().slice(0, 32) || '名前なしのプリセット',
-          intervals: normalizeSettings({ intervals: preset.intervals }).intervals.map(({ minutes }) => ({ minutes })),
+          intervals: normalizeSettings({ intervals: preset.intervals }).intervals.map(({ minutes, type }) => ({ minutes, type })),
           repeatCount: clamp(Math.round(Number(preset.repeatCount) || 1), 1, 99),
         }))
         .slice(0, 30);
@@ -249,10 +250,11 @@
       const row = document.createElement('li');
       row.className = `interval-row mdc-list-item${interval.id === selectedIntervalId ? ' is-selected' : ''}`;
       row.dataset.id = interval.id;
-      row.setAttribute('aria-label', `${index + 1}番目の時間区間、${interval.minutes}分${interval.id === selectedIntervalId ? '、選択中' : ''}`);
+      row.setAttribute('aria-label', `${index + 1}番目の時間区間、${interval.type === 'break' ? '休憩' : '作業'}、${interval.minutes}分${interval.id === selectedIntervalId ? '、選択中' : ''}`);
       row.innerHTML = `
         <span class="interval-index">${String(index + 1).padStart(2, '0')}</span>
         <div class="interval-input-wrap">
+          <select class="interval-type" aria-label="${index + 1}番目の区間の種類"><option value="work"${interval.type === 'work' ? ' selected' : ''}>作業</option><option value="break"${interval.type === 'break' ? ' selected' : ''}>休憩</option></select>
           <input class="interval-input" type="number" min="1" max="999" step="1" inputmode="numeric" value="${interval.minutes}" aria-label="${index + 1}番目の時間（分）" />
           <span class="unit-label">分</span>
         </div>
@@ -270,7 +272,7 @@
   function settingsMatchPreset(preset) {
     return preset.repeatCount === settings.repeatCount
       && preset.intervals.length === settings.intervals.length
-      && preset.intervals.every((interval, index) => interval.minutes === settings.intervals[index].minutes);
+      && preset.intervals.every((interval, index) => interval.minutes === settings.intervals[index].minutes && interval.type === settings.intervals[index].type);
   }
 
   function updateAppliedPreset() {
@@ -331,7 +333,7 @@
     ['running', 'paused', 'complete'].forEach((state) => {
       elements.timerOrb.classList.toggle(`is-${state}`, timer.status === state);
     });
-    elements.intervalName.textContent = timer.status === 'complete' ? '次の流れを始めましょう' : `区間 ${String(timer.intervalIndex + 1).padStart(2, '0')}`;
+    elements.intervalName.textContent = timer.status === 'complete' ? '次の流れを始めましょう' : `${currentInterval().type === 'break' ? '休憩' : '作業'} · 区間 ${String(timer.intervalIndex + 1).padStart(2, '0')}`;
     elements.stepCounter.textContent = `区間 ${timer.status === 'complete' ? settings.intervals.length : timer.intervalIndex + 1} / ${settings.intervals.length}`;
     elements.setCounter.textContent = timer.status === 'complete' ? `${settings.repeatCount} / ${settings.repeatCount}` : `${timer.setIndex + 1} / ${settings.repeatCount}`;
     elements.overallRemaining.textContent = formatLong(overallRemainingMs());
@@ -391,6 +393,7 @@
     const rows = [...elements.intervalList.querySelectorAll('.interval-row')];
     settings.intervals = rows.map((row, index) => ({
       id: row.dataset.id || makeId(),
+      type: row.querySelector('.interval-type').value,
       minutes: normalizeMinutes(row.querySelector('.interval-input').value, settings.intervals[index]?.minutes || 5),
     }));
     settings.repeatCount = clamp(Math.round(Number(elements.repeatCount.value) || 1), 1, 99);
@@ -414,7 +417,7 @@
   }
 
   function addInterval() {
-    const interval = { id: makeId(), minutes: 5 };
+    const interval = { id: makeId(), minutes: 5, type: 'work' };
     const selectedIndex = settings.intervals.findIndex((item) => item.id === selectedIntervalId);
     const insertionIndex = selectedIndex < 0 ? settings.intervals.length : selectedIndex + 1;
     settings.intervals.splice(insertionIndex, 0, interval);
@@ -467,7 +470,7 @@
     const preset = {
       id: makeId('preset'),
       name: name.slice(0, 32),
-      intervals: settings.intervals.map(({ minutes }) => ({ minutes })),
+      intervals: settings.intervals.map(({ minutes, type }) => ({ minutes, type })),
       repeatCount: settings.repeatCount,
     };
     presets = [preset, ...presets.filter((item) => item.name !== preset.name)].slice(0, 30);
@@ -518,10 +521,10 @@
     if (audioContext?.state === 'suspended') audioContext.resume().catch(() => {});
   }
 
-  function playNotificationTone() {
+  function playNotificationTone(type = 'work') {
     if (!audioContext || settings.volume <= 0) return;
     const now = audioContext.currentTime;
-    const pattern = [880, 880, 880];
+    const pattern = type === 'break' ? [660, 880] : [880, 880, 880];
     pattern.forEach((frequency, index) => {
       const startAt = now + index * 0.3;
       const stopAt = startAt + 0.18;
@@ -692,8 +695,8 @@
     }
   }
 
-  function notifyIntervalFinished(completedSet, completedStep, nextLabel) {
-    playNotificationTone();
+  function notifyIntervalFinished(completedSet, completedStep, nextLabel, nextType = 'work') {
+    playNotificationTone(nextType);
     const body = nextLabel ? `次の区間: ${nextLabel}` : 'すべてのセットが完了しました。';
     void sendBrowserNotification(`区間 ${completedStep} が終了`, body);
     if (document.hidden) showToast(nextLabel ? `区間終了 · 次は ${nextLabel}` : 'セッションが完了しました。');
@@ -762,7 +765,7 @@
       timer.remainingMs = durationFor();
       timer.endAt = previousEnd + timer.remainingMs;
       selectInterval(settings.intervals[timer.intervalIndex].id);
-      notifyIntervalFinished(completedSet, completedStep, `${settings.intervals[timer.intervalIndex].minutes}分`);
+      notifyIntervalFinished(completedSet, completedStep, `${settings.intervals[timer.intervalIndex].type === 'break' ? '休憩' : '作業'} ${settings.intervals[timer.intervalIndex].minutes}分`, settings.intervals[timer.intervalIndex].type);
       guard += 1;
     }
     renderTimer();
@@ -839,6 +842,11 @@
   });
 
   elements.intervalList.addEventListener('change', (event) => {
+    if (event.target.classList.contains('interval-type')) {
+      selectInterval(event.target.closest('.interval-row').dataset.id);
+      updateSettingsFromInputs();
+      return;
+    }
     if (!event.target.classList.contains('interval-input')) return;
     const row = event.target.closest('.interval-row');
     const interval = settings.intervals.find((item) => item.id === row.dataset.id);
