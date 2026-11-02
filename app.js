@@ -29,7 +29,7 @@
     presetFeedback: $('#presetFeedback'),
     loadPreset: $('#loadPreset'),
     savePreset: $('#savePreset'),
-    updatePreset: $('#updatePreset'),
+    deletePreset: $('#deletePreset'),
     addInterval: $('#addInterval'),
     restoreDefaults: $('#restoreDefaults'),
     settingsFieldset: $('#settingsFieldset'),
@@ -281,8 +281,8 @@
     if (elements.activePreset) {
       elements.activePreset.textContent = appliedPreset ? `適用中: ${appliedPreset.name}` : '適用中: カスタム設定';
     }
-    elements.updatePreset.disabled = !presets.some((preset) => preset.id === elements.presetSelect.value);
-    elements.loadPreset.disabled = elements.updatePreset.disabled;
+    elements.deletePreset.disabled = !presets.some((preset) => preset.id === elements.presetSelect.value);
+    elements.loadPreset.disabled = elements.deletePreset.disabled;
   }
 
   function renderPresets(selectedId = elements.presetSelect.value) {
@@ -489,21 +489,19 @@
     showFeedback(`「${preset.name}」を保存しました。`);
   }
 
-  function updatePreset() {
+  function deletePreset() {
     const preset = presets.find((item) => item.id === elements.presetSelect.value);
-    if (!preset) return;
-    const name = elements.presetName.value.trim().slice(0, 32) || preset.name;
-    if (presets.some((item) => item.id !== preset.id && item.name === name)) {
-      showFeedback('同じ名前のプリセットがあります。別の名前を入力してください。');
+    if (!preset || !window.confirm(`「${preset.name}」を削除しますか？`)) return;
+    const remaining = presets.filter((item) => item.id !== preset.id);
+    try {
+      localStorage.setItem(STORAGE_KEYS.presets, JSON.stringify(remaining));
+    } catch {
+      showFeedback('プリセットを削除できませんでした。');
       return;
     }
-    preset.name = name;
-    preset.intervals = settings.intervals.map(({ minutes, type }) => ({ minutes, type }));
-    preset.repeatCount = settings.repeatCount;
-    persistPresets();
-    renderPresets(preset.id);
-    elements.presetName.value = '';
-    showFeedback(`「${name}」を更新しました。`);
+    presets = remaining;
+    renderPresets('');
+    showFeedback(`「${preset.name}」を削除しました。`);
   }
 
   function loadPreset() {
@@ -547,7 +545,7 @@
   }
 
   function playNotificationTone(type = 'work') {
-    if (!audioContext || settings.volume <= 0) return;
+    if (!audioContext || audioContext.state !== 'running' || settings.volume <= 0) return;
     const now = audioContext.currentTime;
     const pattern = type === 'break' ? [660, 880] : [880, 880, 880];
     pattern.forEach((frequency, index) => {
@@ -595,6 +593,7 @@
       body,
       tag: 'focus-flow-timer',
       renotify: true,
+      silent: true,
       requireInteraction: true,
     };
 
@@ -741,6 +740,11 @@
   }
 
   function pauseTimer() {
+    const now = Date.now();
+    if (timer.endAt !== null && now >= timer.endAt) {
+      advanceInterval(now);
+      if (timer.status !== 'running') return;
+    }
     timer.remainingMs = currentRemainingMs();
     timer.endAt = null;
     timer.status = 'paused';
@@ -765,8 +769,8 @@
   }
 
   function advanceInterval(now = Date.now()) {
-    let guard = 0;
-    while (timer.status === 'running' && timer.endAt !== null && now >= timer.endAt && guard < 100) {
+    let lastNotification = null;
+    while (timer.status === 'running' && timer.endAt !== null && now >= timer.endAt) {
       const completedStep = timer.intervalIndex + 1;
       const completedSet = timer.setIndex + 1;
       const previousEnd = timer.endAt;
@@ -776,9 +780,9 @@
       if (isLastInterval && isLastSet) {
         timer.endAt = null;
         timer.remainingMs = 0;
-        notifyIntervalFinished(completedSet, completedStep, null);
+        lastNotification = [completedSet, completedStep, null];
         completeSession();
-        return;
+        break;
       }
 
       if (isLastInterval) {
@@ -789,11 +793,14 @@
       }
       timer.remainingMs = durationFor();
       timer.endAt = previousEnd + timer.remainingMs;
-      selectInterval(settings.intervals[timer.intervalIndex].id);
-      notifyIntervalFinished(completedSet, completedStep, `${settings.intervals[timer.intervalIndex].type === 'break' ? '休憩' : '作業'} ${settings.intervals[timer.intervalIndex].minutes}分`, settings.intervals[timer.intervalIndex].type);
-      guard += 1;
+      const next = settings.intervals[timer.intervalIndex];
+      lastNotification = [completedSet, completedStep, `${next.type === 'break' ? '休憩' : '作業'} ${next.minutes}分`, next.type];
     }
-    renderTimer();
+    if (lastNotification) notifyIntervalFinished(...lastNotification);
+    if (timer.status === 'running') {
+      selectInterval(settings.intervals[timer.intervalIndex].id);
+      renderTimer();
+    }
   }
 
   function tick() {
@@ -899,7 +906,7 @@
     if (event.key === 'Enter') savePreset();
   });
   elements.loadPreset.addEventListener('click', loadPreset);
-  elements.updatePreset.addEventListener('click', updatePreset);
+  elements.deletePreset.addEventListener('click', deletePreset);
   elements.presetSelect.addEventListener('change', updateAppliedPreset);
   elements.restoreDefaults.addEventListener('click', restoreDefaults);
   elements.notificationButton.addEventListener('click', () => requestNotificationPermission(true));

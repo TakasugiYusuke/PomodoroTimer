@@ -378,8 +378,7 @@ kbd { display: inline-flex; min-width: 28px; min-height: 24px; align-items: cent
 .preset-save-row .preset-name-field { flex: 1; }
 .preset-load-row, .preset-save-row { gap: var(--space-sm); margin-top: var(--space-md); }
 .preset-load-row select { flex: 1; }
-.preset-update { width: 100%; margin-top: var(--space-sm); }
-.preset-help { margin: var(--space-sm) 0 0; color: var(--on-surface-muted); font-size: var(--font-caption-size); line-height: 1.5; }
+.preset-delete { width: 100%; margin-top: var(--space-sm); }
 .button-small { min-height: 48px; padding: 0 var(--space-md); }
 .inline-feedback { min-height: 21px; margin: var(--space-sm) 0 0; color: var(--primary); }
 

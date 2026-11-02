@@ -41,7 +41,7 @@ GitHubリポジトリは現在 `TakasugiYusuke/PomodoroTimer` です。`Settings
 - 終了予定時刻を基準にしたカウントダウン
 - Web Audio による終了音と音量保存
 - ブラウザ通知（対応ブラウザ・HTTPS環境で利用可能）
-- localStorage による前回設定と複数プリセットの保存・更新（名前の変更を含む）
+- localStorage による前回設定と複数プリセットの保存・削除
 - 実行履歴は保存しない
 
 ## UI実装状況
