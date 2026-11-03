@@ -721,9 +721,9 @@
 
   function notifyIntervalFinished(completedSet, completedStep, nextLabel, nextType = 'work') {
     playNotificationTone(nextType);
-    const body = nextLabel ? `次の区間: ${nextLabel}` : 'すべてのセットが完了しました。';
+    const body = nextLabel ? `現在の区間: ${nextLabel}` : 'すべてのセットが完了しました。';
     void sendBrowserNotification(`区間 ${completedStep} が終了`, body);
-    if (document.hidden) showToast(nextLabel ? `区間終了 · 次は ${nextLabel}` : 'セッションが完了しました。');
+    if (document.hidden) showToast(nextLabel ? `区間終了 · 現在の区間: ${nextLabel}` : 'セッションが完了しました。');
   }
 
   function beginFromIdle() {
